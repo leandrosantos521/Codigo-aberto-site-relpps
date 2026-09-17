@@ -12,14 +12,14 @@ async function getAccessToken(){
   const refresh=stored?.refresh_token || process.env.BLING_REFRESH_TOKEN;
   const clientId=process.env.BLING_CLIENT_ID;
   const clientSecret=process.env.BLING_CLIENT_SECRET;
-  if(!refresh||!clientId||!clientSecret) throw new Error('Bling não configurado no Netlify: BLING_REFRESH_TOKEN/CLIENT_ID/CLIENT_SECRET.');
+  if(!refresh||!clientId||!clientSecret){ const e=new Error('Bling ainda não está conectado. Conecte sua conta do Bling para continuar.'); e.statusCode=409; e.code='BLING_CONNECTION_REQUIRED'; e.reconnectUrl='/api/bling?action=authorize'; throw e; }
   const basic=Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
   const body=new URLSearchParams({grant_type:'refresh_token',refresh_token:refresh});
   const r=await fetch(`${BLING_BASE}/oauth/token`,{method:'POST',headers:{Authorization:`Basic ${basic}`,'Content-Type':'application/x-www-form-urlencoded',Accept:'application/json','enable-jwt':'1'},body});
   const data=await r.json().catch(()=>({}));
   if(!r.ok) throw new Error(data?.error?.description || data?.message || `Bling OAuth HTTP ${r.status}`);
   data.saved_at=new Date().toISOString(); if(data.expires_in) data.expires_at=new Date(Date.now()+Number(data.expires_in)*1000).toISOString();
-  try{ await saveBlingOAuth(data); }catch(e){ console.warn('Falha ao salvar OAuth do Bling:',e.message); }
+  await saveBlingOAuth(data);
   return data.access_token;
 }
 

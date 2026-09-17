@@ -1783,10 +1783,13 @@ async function createCheckoutOrder(payload){
       setTimeout(()=>{ window.location.href="/api/bling?action=repair"; },650);
       return;
     }
-    if(data.code==="BLING_CONNECTION_REQUIRED"){
+    if(data.code==="BLING_CONNECTION_REQUIRED" || /BLING_REFRESH_TOKEN|Bling (não )?configurado no Netlify|Bling ainda não está conectado/i.test(String(data.message||""))){
       toast("Conecte o Bling para finalizar o pedido. Abrindo a conexão segura…");
       setTimeout(()=>{ window.location.href="/api/bling?action=authorize"; },650);
       return;
+    }
+    if(data.code==="SUPABASE_CONNECTION_REQUIRED"){
+      throw new Error("O Supabase precisa estar configurado no Netlify para salvar a conexão do Bling.");
     }
     throw new Error(data.message||"Não foi possível criar o pedido.");
   }
