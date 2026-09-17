@@ -247,11 +247,11 @@ async function melhorEnvioFreightQuote(order){
   const base=process.env.MELHOR_ENVIO_SANDBOX==='true'?'https://sandbox.melhorenvio.com.br':'https://melhorenvio.com.br';
   const items=orderItemsForShipping(order);
   if(!items.length) throw new Error('O pedido não possui itens para cotar.');
-  const payload={from:{postal_code:from},to:{postal_code:to},products:items.map(i=>({id:i.id,width:i.width,height:i.height,length:i.length,weight:i.weight,insurance_value:i.price,quantity:i.quantity})),options:{receipt:false,own_hand:false},services:'1,2'};
+  const payload={from:{postal_code:from},to:{postal_code:to},products:items.map(i=>({id:i.id,width:i.width,height:i.height,length:i.length,weight:i.weight,insurance_value:i.price,quantity:i.quantity})),options:{receipt:false,own_hand:false}};
   const r=await fetch(`${base}/api/v2/me/shipment/calculate`,{method:'POST',headers:{Authorization:`Bearer ${token}`,Accept:'application/json','Content-Type':'application/json','User-Agent':process.env.MELHOR_ENVIO_USER_AGENT||'Relpps Cosméticos (contato@relpps.com.br)'},body:JSON.stringify(payload)});
   const data=await r.json().catch(()=>[]);
   if(!r.ok) throw new Error(data?.message||'Falha na cotação do Melhor Envio.');
-  return Array.isArray(data)?data.filter(x=>!x.error).map(x=>({id:x.id,name:x.name||x.service||'Entrega',company:x.company?.name||x.company||'Correios',price:money(x.custom_price??x.price),delivery_time:x.custom_delivery_time??x.delivery_time,raw:x})).filter(x=>x.price>0).sort((a,b)=>{const rank=q=>/^pac(?:\s|$)/i.test(String(q.name))||String(q.id)==='1'?0:/^sedex(?:\s|$)/i.test(String(q.name))||String(q.id)==='2'?1:2;return rank(a)-rank(b)||a.price-b.price;}):[];
+  return Array.isArray(data)?data.filter(x=>!x.error).map(x=>({id:x.id,name:x.name||x.service||'Entrega',company:x.company?.name||x.company||'Melhor Envio',price:money(x.custom_price??x.price),delivery_time:x.custom_delivery_time??x.delivery_time,raw:x})).filter(x=>x.price>0):[];
 }
 
 async function createFullOrderPayment(order){

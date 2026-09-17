@@ -1531,69 +1531,45 @@ function updateCartPageReceiveUI(){
   const helper=document.querySelector(".cart-page-helper");
   const shippingBox=$("#cartPageShippingOptions");
   if(cepWrap) cepWrap.classList.toggle("hidden",pickup);
-  if(helper) helper.textContent=pickup?"Você escolheu retirada. No checkout, escolha retirada presencial ou retirada via Uber / 99 por conta do cliente.":"Melhor Envio está temporariamente bloqueado. Uber / 99 continua disponível e o valor do transporte será informado depois do pedido.";
+  if(helper) helper.textContent=pickup?"Você escolheu retirada. No checkout, escolha retirada presencial ou retirada via Uber / 99 por conta do cliente.":"Digite seu CEP para registrar a localização. O frete será calculado depois pela Relpps.";
   if(shippingBox){
-    if(pickup){ shippingBox.innerHTML='<div class="cart-page-shipping-empty pickup-mode"><b>🏪 Retirada selecionada</b><br>Sem frete. No checkout você poderá escolher retirada presencial ou retirada via Uber / 99.</div>'; }
+    if(pickup){ shippingBox.innerHTML='<div class="cart-page-shipping-empty pickup-mode"><b>🏪 Retirada selecionada</b><br>Sem frete nesta etapa. Você escolherá o tipo de retirada no checkout.</div>'; }
     else renderCartPageShipping();
   }
   updateCartPageTotals();
 }
-function shippingServiceRank(q){
-  const name=String(q?.name||q?.service||'').trim();
-  if(/^pac(?:\b|\s)/i.test(name) || String(q?.id)==='1') return 0;
-  if(/^sedex(?:\b|\s)/i.test(name) || String(q?.id)==='2') return 1;
-  if(/mini\s*envios/i.test(name)) return 2;
-  return 9;
-}
-function shippingServiceLabel(q){
-  const name=String(q?.name||q?.service||'Entrega').trim();
-  if(/^pac(?:\b|\s)/i.test(name)) return 'PAC';
-  if(/^sedex(?:\b|\s)/i.test(name)) return 'SEDEX';
-  if(/mini\s*envios/i.test(name)) return 'Mini Envios';
-  return name;
-}
 function renderCartPageShipping(){
   const box=$("#cartPageShippingOptions"); if(!box)return;
-  if(cartPageReceiveMode==="pickup"){
-    box.innerHTML=`
-      <div class="cart-page-shipping-option active-option">
-        <span class="shipping-provider-mark">🏪</span><span><b>Retirada presencial</b><small>Pedido reservado para retirada na loja após confirmação.</small></span><strong>GRÁTIS</strong>
-      </div>
-      <div class="cart-page-shipping-option active-option">
-        <span class="shipping-provider-mark">🛵</span><span><b>Retirada via Uber / 99</b><small>Transporte por conta do cliente após a liberação do pedido.</small></span><strong>GRÁTIS</strong>
-      </div>`;
-    updateCartPageTotals(); return;
-  }
-  box.innerHTML=`
-    <div class="cart-page-shipping-option blocked-option" aria-disabled="true">
-      <span class="shipping-provider-mark">🔒</span>
-      <span><b>Melhor Envio</b><small>Temporariamente indisponível. Esta opção está bloqueada e não impede a compra.</small></span>
-      <strong>BLOQUEADO</strong>
-    </div>
-    <label class="cart-page-shipping-option uber-option active-option">
-      <input type="radio" name="cartPageShippingService" data-provider="uber" checked>
-      <span class="shipping-provider-mark">🛵</span>
-      <span><b>Uber / 99 — Entrega</b><small>A calcular. A Relpps informa o valor do transporte depois que o pedido for criado.</small></span>
-      <strong>A CALCULAR</strong>
-    </label>`;
-  const r=box.querySelector('input[data-provider="uber"]');
-  r?.addEventListener('change',()=>{ selectedShipping={provider:"uber",price:0,service:"uber_manual",id:"uber_manual",label:"Uber / 99 — A calcular",manual:true}; updateCartPageTotals(); });
-  selectedShipping={provider:"uber",price:0,service:"uber_manual",id:"uber_manual",label:"Uber / 99 — A calcular",manual:true};
+  if(cartPageReceiveMode==="pickup"){ updateCartPageTotals(); return; }
+  const qs=[...(shippingQuotes.melhor_envio||[])].sort((a,b)=>{const rank=q=>String(q.id)==="1"||/^pac(?:\s|$)/i.test(String(q.name||q.service||""))?0:String(q.id)==="2"||/^sedex(?:\s|$)/i.test(String(q.name||q.service||""))?1:2;return rank(a)-rank(b)||Number(a.price||0)-Number(b.price||0);});
+  const opts=qs.map(q=>({provider:"melhor_envio",icon:"📦",title:`${q.company||"Correios"} — ${q.name||q.service||"Entrega"}`,sub:q.delivery_time?`${q.delivery_time} dias úteis`:"prazo não informado",q}));
+  opts.push({provider:"uber",icon:"🛵",title:"Uber / 99",sub:"A calcular — valor informado depois do pedido",q:{price:0,service:"uber_manual",id:"uber_manual",label:"Uber / 99 — A calcular",manual:true}});
+  if(!opts.length){box.innerHTML='<div class="cart-page-shipping-empty"><b>Informe seu CEP</b><br>O Melhor Envio será consultado em tempo real.</div><label class="cart-page-shipping-option uber-option"><input type="radio" name="cartPageShippingService" data-provider="uber" data-index="0"><span class="shipping-provider-mark">🛵</span><span><b>Uber / 99</b><small>A calcular — o valor será informado depois do pedido</small></span><strong>A calcular</strong></label>';box.querySelector('input[data-provider="uber"]')?.addEventListener('change',()=>{selectedShipping={provider:'uber',price:0,service:'uber_manual',id:'uber_manual',label:'Uber / 99 — A calcular',manual:true};updateCartPageTotals();});updateCartPageTotals();return;}
+  box.innerHTML=opts.map((o,i)=>{const isUber=o.provider==="uber";const checked=selectedShipping&&selectedShipping.provider===o.provider&&String(selectedShipping.id||selectedShipping.service)===String(o.q.id||o.q.service)?"checked":(!selectedShipping&&i===0?"checked":"");return `<label class="cart-page-shipping-option ${isUber?"uber-option":""}"><input type="radio" name="cartPageShippingService" data-provider="${o.provider}" data-index="${i}" ${checked}><span class="shipping-provider-mark">${o.icon}</span><span><b>${o.title}</b><small>${o.sub}</small></span><strong>${isUber?"A calcular":money(o.q.price)}</strong></label>`}).join("");
+  box.querySelectorAll('input[name="cartPageShippingService"]').forEach(r=>r.addEventListener("change",()=>{
+    const o=opts[Number(r.dataset.index)]; selectedShipping={provider:o.provider,...o.q,label:o.q.label||o.title,manual:o.provider==="uber"}; updateCartPageTotals();
+  }));
+  if(!selectedShipping&&opts[0])selectedShipping={provider:opts[0].provider,...opts[0].q,label:opts[0].q.label||opts[0].title,manual:false};
   updateCartPageTotals();
 }
 async function quoteCartPageShipping(){
   if(cartPageReceiveMode==="pickup"){ updateCartPageReceiveUI(); return; }
   const input=$("#cartPageCep"); const cep=(input?.value||"").replace(/\D/g,"");
-  if(cep.length!==8){toast("Informe um CEP válido para registrar a localização.");return;}
+  if(cep.length!==8){toast("Informe um CEP válido.");return;}
   input.value=formatCep(cep);
+  const box=$("#cartPageShippingOptions"); if(box)box.innerHTML='<div class="cart-page-shipping-empty"><b>Calculando Melhor Envio…</b><br>Aguarde alguns segundos.</div>';
   try{
     const cityData=await fetch(`https://viacep.com.br/ws/${cep}/json/`).then(r=>r.json());
     if(cityData.erro)throw new Error("CEP não encontrado.");
-    selectedShipping={provider:"uber",price:0,service:"uber_manual",id:"uber_manual",label:"Uber / 99 — A calcular",manual:true};
-    renderCartPageShipping();
-    toast("CEP registrado. Uber / 99 continua disponível para cotação após o pedido.");
-  }catch(e){ toast(e.message||"Não foi possível validar o CEP."); }
+    const r=await fetch("/api/shipping",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({cep,address:cityData.logradouro||"",number:"",complement:"",district:cityData.bairro||"",city:cityData.localidade||"",uf:cityData.uf||"",subtotal:Number(totals("card").total||0),items:cartForShipping()})});
+    const data=await r.json().catch(()=>({})); if(!r.ok)throw new Error(data.message||"Não foi possível calcular o frete.");
+    shippingQuotes={melhor_envio:Array.isArray(data.melhor_envio)?data.melhor_envio:[],uber:null};
+    selectedShipping=null; renderCartPageShipping();
+    if(!shippingQuotes.melhor_envio.length)toast("O Melhor Envio não retornou opções para este CEP.");
+    else toast("Frete do Melhor Envio calculado.");
+  }catch(e){shippingQuotes={melhor_envio:[],uber:null};selectedShipping=null;renderCartPageShipping();toast(e.message||"Não foi possível calcular o frete.");}
 }
+
 function getAppliedCoupon(){return checkoutCoupon && !checkoutCoupon.used ? checkoutCoupon : null;}
 function applyCheckoutCoupon(){
   const input=$("#checkoutCouponCode"), status=$("#checkoutCouponStatus"); const code=String(input?.value||"").trim().toUpperCase();
@@ -1638,11 +1614,11 @@ function updateCheckoutTotals(){
   updateCartPageTotals();
   return {...base,shipping:getShippingValue(),total};
 }
-function getSelectedDeliveryMethod(){ return $('input[name="delivery"]:checked')?.value || "uber"; }
+function getSelectedDeliveryMethod(){ return $('input[name="delivery"]:checked')?.value || "melhor_envio"; }
 function isPickupMethod(method){ return method==="pickup" || method==="pickup_uber"; }
 function updateDeliveryUI(){
   const method=getSelectedDeliveryMethod();
-  const needsAddress=method==="uber";
+  const needsAddress=method!=="pickup";
   $("#addressFields")?.classList.toggle("hidden",!needsAddress);
   const fields=$("#checkoutForm");
   ["cep","address","number","district","city"].forEach(name=>{ if(fields?.elements[name]) fields.elements[name].required=needsAddress; });
@@ -1774,11 +1750,10 @@ function renderShippingQuotes(){
     panel.innerHTML=`<div class="shipping-empty"><b>Informe o CEP para calcular</b><span>O Melhor Envio será consultado em tempo real antes do pagamento.</span></div>`;
     return;
   }
-  const ordered=[...qs].sort((a,b)=>shippingServiceRank(a)-shippingServiceRank(b)||Number(a.price||0)-Number(b.price||0));
-  panel.innerHTML=`<div class="shipping-provider-title">Opções dos Correios</div><div class="shipping-options">${ordered.map((q,i)=>{const checked=selectedShipping?.provider==="melhor_envio" && String(selectedShipping.id||selectedShipping.service)===String(q.id);return `<label class="shipping-option"><input type="radio" name="shippingService" value="${i}" ${checked?"checked":""}><span class="shipping-provider-mark">📦</span><span><b>Correios — ${shippingServiceLabel(q)}</b><small>${q.delivery_time?`${q.delivery_time} dias úteis`:"prazo não informado"}</small></span><strong>${money(q.price)}</strong></label>`}).join("")}</div>`;
+  panel.innerHTML=`<div class="shipping-provider-title">Opções do Melhor Envio</div><div class="shipping-options">${qs.map((q,i)=>{const checked=selectedShipping?.provider==="melhor_envio" && String(selectedShipping.id||selectedShipping.service)===String(q.id);return `<label class="shipping-option"><input type="radio" name="shippingService" value="${i}" ${checked?"checked":""}><span class="shipping-provider-mark">📦</span><span><b>${q.company||"Melhor Envio"} — ${q.name||q.service||"Entrega"}</b><small>${q.delivery_time?`${q.delivery_time} dias úteis`:"prazo não informado"}</small></span><strong>${money(q.price)}</strong></label>`}).join("")}</div>`;
   panel.querySelectorAll('input[name="shippingService"]').forEach(r=>r.addEventListener("change",()=>{
-    const q=ordered[Number(r.value)];
-    selectedShipping={provider:"melhor_envio",...q,label:`Correios — ${shippingServiceLabel(q)}`};
+    const q=qs[Number(r.value)];
+    selectedShipping={provider:"melhor_envio",...q,label:q.name||q.service||"Melhor Envio"};
     updateCheckoutTotals();
   }));
 }
@@ -1792,7 +1767,7 @@ async function openCheckout(){
   // A tela do carrinho não altera os produtos: ela apenas define a intenção de recebimento.
   if(cartPageReceiveMode==="pickup"){
     const pickupRadio=$('input[name="delivery"][value="pickup"]'); if(pickupRadio) pickupRadio.checked=true;
-  } else if(selectedShipping && selectedShipping.provider==="uber"){
+  } else if(selectedShipping && (selectedShipping.provider==="uber" || selectedShipping.provider==="melhor_envio")){
     const radio=$(`input[name="delivery"][value="${selectedShipping.provider}"]`); if(radio) radio.checked=true;
   }
   await renderCheckout(); const checkoutPage=$("#checkoutModal"); checkoutPage.classList.remove("hidden"); checkoutPage.setAttribute("aria-hidden","false"); document.body.style.overflow="hidden";
@@ -1848,7 +1823,6 @@ function showPaymentResult(order,data){
 async function submitOrder(form){
   if(!currentUser){toast("Entre ou crie uma conta para finalizar a compra.");return;}
   const data=Object.fromEntries(new FormData(form).entries()); const method=data.delivery;
-  if(method==="melhor_envio"){toast("Melhor Envio está temporariamente bloqueado. Escolha Uber / 99 ou uma forma de retirada.");return;}
   if(method!=="uber" && !data.payment){toast("Escolha Pix, Cartão ou Dinheiro para continuar.");return;}
   if(method==="uber") data.payment="pending";
   checkoutPayment=data.payment;
@@ -1882,12 +1856,7 @@ async function submitOrder(form){
       setTimeout(()=>{window.location.href=result.paymentUrl;},250);
       return;
     }
-    if(data.payment==="cash") {
-      toast("Pedido reservado. Abrindo local para pagamento e retirada…");
-      setTimeout(()=>{window.location.assign(`retirada.html?order=${encodeURIComponent(order.id)}&cash=1`);},180);
-      return;
-    }
-    if(method==="pickup_uber" || method==="uber") { window.location.assign(`pedido.html?order=${encodeURIComponent(order.id)}`); return; }
+    if(data.payment==="cash" || method==="pickup_uber" || method==="uber") { window.location.href=`pedido.html?order=${encodeURIComponent(order.id)}`; return; }
     showPaymentResult(order,data);
     toast(data.payment==="cash"?"Pedido criado e aguardando pagamento na retirada.":"Pedido criado com status Aguardando pagamento.");
   }catch(e){toast(e.message||"Erro ao criar pedido.");}
@@ -2295,17 +2264,9 @@ function updateCheckoutStageSummary(){
   const hint=$("#checkoutStageSummaryHint"), submit=$("#checkoutSubmitButton");
   if(!hint||!submit) return;
   submit.classList.toggle("hidden",checkoutStage!==3);
-  const method=getSelectedDeliveryMethod();
-  const payment=$("input[name=payment]:checked")?.value;
   if(checkoutStage===1) hint.textContent="Complete seus dados para avançar para a próxima etapa.";
-  else if(checkoutStage===2) hint.textContent="Escolha a modalidade e informe o CEP. O frete será calculado antes do pagamento.";
-  else if(payment==="cash" && method==="pickup") {
-    hint.textContent="Pagamento em dinheiro somente na loja. Ao confirmar, você receberá o endereço para pagar e retirar.";
-    submit.textContent="CONFIRMAR E VER LOCALIZAÇÃO";
-  } else {
-    hint.textContent="Escolha a forma de pagamento e revise o pedido antes de finalizar.";
-    submit.textContent=method==="pickup"?"IR PARA O CHECKOUT SEGURO":"IR PARA O CHECKOUT SEGURO";
-  }
+  else if(checkoutStage===2) hint.textContent="Escolha a modalidade e informe o CEP. O frete será calculado pela Relpps depois do pedido.";
+  else hint.textContent="Escolha a forma de pagamento e revise o pedido antes de finalizar.";
 }
 
 function setCheckoutStage(stage, scroll=true){
@@ -2332,11 +2293,7 @@ function validateCheckoutReceiveStage(){
   const method=getSelectedDeliveryMethod();
   if(isPickupMethod(method)) return true;
   if(!checkoutRequiredFields(["cep","address","number","district","city"])) return false;
-  if(method==="melhor_envio" && (!selectedShipping || selectedShipping.provider!=="melhor_envio" || Number(selectedShipping.price||0)<=0 || !selectedShipping.quote_token)){
-    toast("Calcule e selecione PAC, SEDEX ou Mini Envios antes de continuar.");
-    document.querySelector("#shippingQuotePanel")?.scrollIntoView({behavior:"smooth",block:"center"});
-    return false;
-  }
+  if(method==="melhor_envio" && (!selectedShipping || selectedShipping.provider!=="melhor_envio" || Number(selectedShipping.price||0)<=0 || !selectedShipping.quote_token)){ toast("Calcule e selecione uma opção do Melhor Envio antes de continuar."); return false; }
   if(method==="uber") selectedShipping={provider:"uber",price:0,service:"uber_manual",id:"uber_manual",label:"Uber / 99 — A calcular",manual:true};
   return true;
 }
