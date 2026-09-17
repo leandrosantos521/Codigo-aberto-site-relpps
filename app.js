@@ -2225,11 +2225,11 @@ function renderPaymentVisual(payment){
   if(!payment){ box.innerHTML=""; box.classList.add("hidden"); return; }
   box.classList.remove("hidden");
   if(payment==="pix_online"){
-    box.innerHTML=`<div class="payment-detail-head"><div><b>Pagamento via Pix</b><small>Rápido, seguro e com confirmação online.</small></div><span>✦ PIX</span></div><div class="payment-detail-body"><div class="pix-visual"><div class="pix-code-mock" aria-label="Prévia visual do QR Code"></div><div class="pix-copy"><b>Seu QR Code aparecerá aqui</b><p>Esta é uma prévia visual. Na próxima etapa da integração, o QR Code e o código Copia e Cola serão gerados automaticamente pelo provedor de pagamento.</p><span class="pix-pill">GERAÇÃO SEGURA NO CHECKOUT</span></div></div></div>`;
+    box.innerHTML=`<div class="payment-detail-head"><div><b>Pix pela InfinitePay</b><small>Você não digita dados bancários aqui. Ao continuar, o pedido será criado e você será levado ao checkout seguro da InfinitePay.</small></div><span>✦ PIX</span></div><div class="payment-detail-body"><div class="checkout-provider-notice"><strong>Pagamento seguro na InfinitePay</strong><p>O QR Code e o código Copia e Cola serão gerados diretamente pela InfinitePay na próxima etapa.</p></div></div>`;
   }else if(payment==="card"){
-    box.innerHTML=`<div class="payment-detail-head"><div><b>Dados do cartão</b><small>Prévia do formulário que será conectado ao provedor de pagamento.</small></div><span>▣ CARTÃO</span></div><div class="payment-detail-body"><div class="payment-visual-grid"><label class="wide">Nome impresso no cartão<input type="text" placeholder="Como está no cartão" autocomplete="cc-name"></label><label class="wide">Número do cartão<input type="text" inputmode="numeric" placeholder="0000 0000 0000 0000" autocomplete="cc-number" maxlength="19"></label><label>Validade<input type="text" inputmode="numeric" placeholder="MM/AA" autocomplete="cc-exp" maxlength="5"></label><label>CVV<input type="password" inputmode="numeric" placeholder="•••" autocomplete="cc-csc" maxlength="4"></label></div></div>`;
+    box.innerHTML=`<div class="payment-detail-head"><div><b>Cartão pela InfinitePay</b><small>Não coloque número, validade ou CVV nesta página. Esses dados serão preenchidos somente no checkout seguro da InfinitePay.</small></div><span>▣ CARTÃO</span></div><div class="payment-detail-body"><div class="checkout-provider-notice"><strong>Você será redirecionado para a InfinitePay</strong><p>Depois de criar o pedido, o botão continuará automaticamente para o checkout oficial da InfinitePay, onde os dados do cartão serão preenchidos com segurança.</p></div></div>`;
   }else if(payment==="cash"){
-    box.innerHTML=`<div class="payment-detail-head"><div><b>Pagamento em dinheiro</b><small>Disponível somente para retirada presencial.</small></div><span>💵 RETIRADA</span></div><div class="payment-detail-body"><div class="cash-visual"><b>Você pagará no momento da retirada.</b><p>Após a confirmação do pedido, ele será preparado para retirada. A integração final poderá atualizar automaticamente o status no Bling após a confirmação do pagamento.</p></div></div>`;
+    box.innerHTML=`<div class="payment-detail-head"><div><b>Pagamento em dinheiro</b><small>Disponível somente para retirada presencial.</small></div><span>💵 RETIRADA</span></div><div class="payment-detail-body"><div class="cash-visual"><b>Você pagará no momento da retirada.</b><p>Após a confirmação do pedido, ele será preparado para retirada.</p></div></div>`;
   }
 }
 
@@ -2237,8 +2237,8 @@ function renderPaymentOptions(method){
   const box=$("#paymentOptions"); if(!box)return;
   let current=checkoutPayment || $("input[name=payment]:checked")?.value || null;
   const opts=[
-    ["pix_online","Pix","Pagamento online seguro e rápido."],
-    ["card","Cartão","Preencha os dados no checkout seguro."]
+    ["pix_online","Pix","Você será levado ao checkout seguro da InfinitePay."],
+    ["card","Cartão","Os dados serão preenchidos somente na InfinitePay."]
   ];
   if(method==="pickup") opts.push(["cash","Dinheiro","Pagamento no momento da retirada presencial."]);
   if(!opts.some(x=>x[0]===current)){ current=null; checkoutPayment=null; }
