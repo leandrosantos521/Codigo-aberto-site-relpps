@@ -1541,8 +1541,8 @@ function updateCartPageReceiveUI(){
 function renderCartPageShipping(){
   const box=$("#cartPageShippingOptions"); if(!box)return;
   if(cartPageReceiveMode==="pickup"){ updateCartPageTotals(); return; }
-  const qs=shippingQuotes.melhor_envio||[];
-  const opts=qs.map(q=>({provider:"melhor_envio",icon:"📦",title:`${q.company||"Melhor Envio"} — ${q.name||q.service||"Entrega"}`,sub:q.delivery_time?`${q.delivery_time} dias úteis`:"prazo não informado",q}));
+  const qs=[...(shippingQuotes.melhor_envio||[])].sort((a,b)=>{const rank=q=>String(q.id)==="1"||/^pac(?:\s|$)/i.test(String(q.name||q.service||""))?0:String(q.id)==="2"||/^sedex(?:\s|$)/i.test(String(q.name||q.service||""))?1:2;return rank(a)-rank(b)||Number(a.price||0)-Number(b.price||0);});
+  const opts=qs.map(q=>({provider:"melhor_envio",icon:"📦",title:`${q.company||"Correios"} — ${q.name||q.service||"Entrega"}`,sub:q.delivery_time?`${q.delivery_time} dias úteis`:"prazo não informado",q}));
   opts.push({provider:"uber",icon:"🛵",title:"Uber / 99",sub:"A calcular — valor informado depois do pedido",q:{price:0,service:"uber_manual",id:"uber_manual",label:"Uber / 99 — A calcular",manual:true}});
   if(!opts.length){box.innerHTML='<div class="cart-page-shipping-empty"><b>Informe seu CEP</b><br>O Melhor Envio será consultado em tempo real.</div><label class="cart-page-shipping-option uber-option"><input type="radio" name="cartPageShippingService" data-provider="uber" data-index="0"><span class="shipping-provider-mark">🛵</span><span><b>Uber / 99</b><small>A calcular — o valor será informado depois do pedido</small></span><strong>A calcular</strong></label>';box.querySelector('input[data-provider="uber"]')?.addEventListener('change',()=>{selectedShipping={provider:'uber',price:0,service:'uber_manual',id:'uber_manual',label:'Uber / 99 — A calcular',manual:true};updateCartPageTotals();});updateCartPageTotals();return;}
   box.innerHTML=opts.map((o,i)=>{const isUber=o.provider==="uber";const checked=selectedShipping&&selectedShipping.provider===o.provider&&String(selectedShipping.id||selectedShipping.service)===String(o.q.id||o.q.service)?"checked":(!selectedShipping&&i===0?"checked":"");return `<label class="cart-page-shipping-option ${isUber?"uber-option":""}"><input type="radio" name="cartPageShippingService" data-provider="${o.provider}" data-index="${i}" ${checked}><span class="shipping-provider-mark">${o.icon}</span><span><b>${o.title}</b><small>${o.sub}</small></span><strong>${isUber?"A calcular":money(o.q.price)}</strong></label>`}).join("");
@@ -1781,6 +1781,12 @@ async function createCheckoutOrder(payload){
     if(data.code==="BLING_REAUTHORIZE_REQUIRED"){
       toast("Atualizando a conexão segura com o Bling…");
       setTimeout(()=>{ window.location.href="/api/bling?action=repair"; },650);
+      return;
+    }
+    if(data.code==="BLING_CONNECTION_REQUIRED"){
+      toast("Conecte o Bling para finalizar o pedido. Abrindo a conexão segura…");
+      setTimeout(()=>{ window.location.href="/api/bling?action=authorize"; },650);
+      return;
     }
     throw new Error(data.message||"Não foi possível criar o pedido.");
   }
