@@ -192,8 +192,8 @@ async function createSaleOrder({orderId,customer,delivery,items,totals,payment,d
     totalProdutos:Number(baseSubtotal.toFixed(2)),
     total:Number(total.toFixed(2)),
     desconto:{valor:Number((automaticDiscount+couponDiscount).toFixed(2)),unidade:'REAL'},
-    observacoes:`Pedido online Relpps ${orderId} | ${paymentKind==='pending'?'PAGAMENTO A COMBINAR':paymentKind==='cash'?'DINHEIRO NA RETIRADA':paymentKind==='pix'?'PIX ONLINE':'CARTÃO ONLINE'} | Status: Aguardando pagamento | Frete: ${delivery?.method==='uber'?'A CALCULAR — UBER ENTREGAS':'A CALCULAR NO MELHOR ENVIO'}`,
-    observacoesInternas:`Desconto automático: R$ ${automaticDiscount.toFixed(2)} | Cupom: R$ ${couponDiscount.toFixed(2)} | Frete: ${shipping>0?`R$ ${shipping.toFixed(2)}`:(delivery?.method==='uber'?"A CALCULAR — UBER ENTREGAS":"A CALCULAR NO MELHOR ENVIO")} | Gateway: ${paymentKind==='cash'?'não utilizado':paymentKind==='pending'?'aguardando pagamento manual':'InfinitePay'} | RELPPS_META:${JSON.stringify({method:relppsMeta.method||delivery?.method||'delivery',payment:relppsMeta.payment||payment,fulfillmentStatus:relppsMeta.fulfillmentStatus||'Aguardando pagamento'})}`,
+    observacoes:`Pedido online Relpps ${orderId} | ${paymentKind==='pending'?'PAGAMENTO APÓS COTAÇÃO':paymentKind==='cash'?'DINHEIRO NA RETIRADA':paymentKind==='pix'?'PIX ONLINE':'CARTÃO ONLINE'} | Status: Aguardando pagamento | Frete: ${delivery?.method==='uber'?'A CALCULAR — UBER ENTREGAS':'A CALCULAR NO MELHOR ENVIO'}`,
+    observacoesInternas:`Desconto automático: R$ ${automaticDiscount.toFixed(2)} | Cupom: R$ ${couponDiscount.toFixed(2)} | Frete: ${shipping>0?`R$ ${shipping.toFixed(2)}`:(delivery?.method==='uber'?"A CALCULAR — UBER ENTREGAS":"A CALCULAR NO MELHOR ENVIO")} | Gateway: ${paymentKind==='cash'?'não utilizado':paymentKind==='pending'?'aguardando cotação':'InfinitePay'} | RELPPS_META:${JSON.stringify({method:relppsMeta.method||delivery?.method||'delivery',payment:relppsMeta.payment||payment,fulfillmentStatus:relppsMeta.fulfillmentStatus||'Aguardando pagamento'})}`,
     transporte:{
       fretePorConta:1,
       frete:Number(shipping.toFixed(2)),

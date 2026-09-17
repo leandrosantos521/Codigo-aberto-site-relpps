@@ -154,7 +154,7 @@ async function createInfinitePayCheckout(order){
       description:`Pedido Relpps ${order.id}`
     }],
     order_nsu:String(order.id),
-    redirect_url:`${publicBaseUrl()}/pedido-pix.html?order=${encodeURIComponent(order.id)}`,
+    redirect_url:`${publicBaseUrl()}/${isPickupMethodServer(order.delivery?.method)?`retirada.html?order=${encodeURIComponent(order.id)}`:`?checkout=infinitepay-return&order=${encodeURIComponent(order.id)}`}`,
     webhook_url:`${publicBaseUrl()}/.netlify/functions/checkout?action=infinitepay-webhook`,
     customer:{
       name:String(order.customer?.name||'').trim(),
@@ -247,11 +247,11 @@ async function melhorEnvioFreightQuote(order){
   const base=process.env.MELHOR_ENVIO_SANDBOX==='true'?'https://sandbox.melhorenvio.com.br':'https://melhorenvio.com.br';
   const items=orderItemsForShipping(order);
   if(!items.length) throw new Error('O pedido não possui itens para cotar.');
-  const payload={from:{postal_code:from},to:{postal_code:to},products:items.map(i=>({id:i.id,width:i.width,height:i.height,length:i.length,weight:i.weight,insurance_value:i.price,quantity:i.quantity})),options:{receipt:false,own_hand:false},services:'1,2'};
+  const payload={from:{postal_code:from},to:{postal_code:to},products:items.map(i=>({id:i.id,width:i.width,height:i.height,length:i.length,weight:i.weight,insurance_value:i.price,quantity:i.quantity})),options:{receipt:false,own_hand:false}};
   const r=await fetch(`${base}/api/v2/me/shipment/calculate`,{method:'POST',headers:{Authorization:`Bearer ${token}`,Accept:'application/json','Content-Type':'application/json','User-Agent':process.env.MELHOR_ENVIO_USER_AGENT||'Relpps Cosméticos (contato@relpps.com.br)'},body:JSON.stringify(payload)});
   const data=await r.json().catch(()=>[]);
   if(!r.ok) throw new Error(data?.message||'Falha na cotação do Melhor Envio.');
-  return Array.isArray(data)?data.filter(x=>!x.error).map(x=>({id:x.id,name:x.name||x.service||'Entrega',company:x.company?.name||x.company||'Correios',price:money(x.custom_price??x.price),delivery_time:x.custom_delivery_time??x.delivery_time,raw:x})).filter(x=>x.price>0).sort((a,b)=>{const rank=q=>/^pac(?:\s|$)/i.test(String(q.name))||String(q.id)==='1'?0:/^sedex(?:\s|$)/i.test(String(q.name))||String(q.id)==='2'?1:2;return rank(a)-rank(b)||a.price-b.price;}):[];
+  return Array.isArray(data)?data.filter(x=>!x.error).map(x=>({id:x.id,name:x.name||x.service||'Entrega',company:x.company?.name||x.company||'Melhor Envio',price:money(x.custom_price??x.price),delivery_time:x.custom_delivery_time??x.delivery_time,raw:x})).filter(x=>x.price>0):[];
 }
 
 async function createFullOrderPayment(order){
@@ -304,20 +304,25 @@ async function syncUberFreightForOrder(id){
   const freight={provider:'uber',price,label:'Uber Entregas',service:'manual_bling',paid:false,source:'bling',updatedAt:new Date().toISOString()};
   const delivery={...(order.delivery||{}),shipping:freight};
   const raw={...(order.raw||{}),delivery,totals,freight,fulfillmentStatus:'Aguardando pagamento',blingFreightSyncedAt:new Date().toISOString()};
+  const fullOrder={...order,delivery,totals,customer:order.customer||order.raw?.customer||{},items:order.items||order.raw?.items||[],id:order.id};
+  let paymentUrl=knownPaymentUrl||null,checkout=null;
+  if(isProduction() && !paymentUrl) ({checkout,paymentUrl}=await createFullOrderPayment(fullOrder));
+  if(!paymentUrl && !isProduction()) paymentUrl=null;
+
   // Mantém o total do Pedido de Venda coerente com o valor final que será cobrado.
   try{await updateSaleOrderFreight(order.bling_order_id,{price,total:totals.total,provider:'uber',label:'Uber Entregas',service:'manual_bling'});}catch(e){
     const err=new Error(`Frete lido do Bling, mas não foi possível atualizar o total do pedido: ${e.message}`); err.statusCode=e.statusCode||502; throw err;
   }
 
-  // Só gera o link quando o frete existe. Assim o cliente nunca paga um total incompleto.
-  const payableOrder={...order,delivery,totals,customer:order.customer||order.raw?.customer||{},items:order.items||order.raw?.items||[],id:order.id};
-  const checkout=await createInfinitePayCheckout(payableOrder);
-  const paymentUrl=checkout?.url||checkout?.checkout_url||checkout?.payment_url||checkout?.link||checkout?.data?.url||null;
-  if(!paymentUrl) throw new Error('A InfinitePay não retornou o link de pagamento após o frete.');
-  try{await persistUberPaymentMeta(bling,{paymentUrl,total:totals.total,freight:price});}catch(e){console.warn('[Bling payment meta]',e.message)}
+  if(paymentUrl){
+    try{
+      const freshBling=await getSaleOrder(order.bling_order_id);
+      await persistUberPaymentMeta(freshBling||bling,{paymentUrl,total:totals.total,freight:price});
+    }catch(e){console.warn('[Bling payment meta] link não gravado no Bling:',e.message)}
+  }
 
-  await safeUpdateOrder(id,{delivery,totals,payment_url:paymentUrl,raw:{...raw,freightPayment:{payment_url:paymentUrl,method:'infinitepay',order_nsu:id,checkout},fulfillmentStatus:'Aguardando pagamento'}});
-  return {ok:true,order:{id,freight,totals,paymentUrl},paymentUrl,paymentMethod:'infinitepay'};
+  await safeUpdateOrder(id,{delivery,totals,payment_url:paymentUrl,raw:{...raw,freightPayment:{payment_url:paymentUrl,checkout,order_nsu:id}}});
+  return {ok:true,order:{id,freight,totals,paymentUrl},paymentUrl};
 }
 
 async function syncUberFreightFromBling(event){
@@ -356,23 +361,20 @@ async function setFreight(event){
   const delivery={...(order.delivery||{}),shipping:freight};
   currentRaw.delivery=delivery; currentRaw.totals=totals; currentRaw.freight=freight;
   currentRaw.fulfillmentStatus='Aguardando pagamento do frete';
+  let paymentUrl=null,checkout=null;
+  if(!isProduction()){
+    paymentUrl=null;
+  }else{
+    checkout=await createInfinitePayFreightCheckout({...order,customer:order.raw?.customer||order.customer,delivery,totals},{price});
+    paymentUrl=checkout?.url||checkout?.checkout_url||checkout?.payment_url||checkout?.link||checkout?.data?.url||null;
+    if(!paymentUrl)throw new Error('A InfinitePay não retornou o link para pagamento do frete.');
+  }
   let blingUpdated=null;
-  let paymentUrl=null;
-  let checkout=null;
   if(order.bling_order_id){
     try{blingUpdated=await updateSaleOrderFreight(order.bling_order_id,{price,total:totals.total,provider,label,service});}catch(e){console.error('[Bling freight update]',e)}
   }
-  // Quando o frete final é lançado para uma entrega Uber, gera o checkout
-  // InfinitePay somente agora, com o valor TOTAL correto (produtos + frete).
-  if(order.delivery?.method==='uber' || provider==='uber'){
-    const payableOrder={...order,delivery,totals,customer:order.customer||order.raw?.customer||{},items:order.items||order.raw?.items||[],id};
-    checkout=await createInfinitePayCheckout(payableOrder);
-    paymentUrl=checkout?.url||checkout?.checkout_url||checkout?.payment_url||checkout?.link||checkout?.data?.url||null;
-    if(!paymentUrl) throw new Error('A InfinitePay não retornou o link de pagamento após o frete.');
-    if(order.bling_order_id){try{await persistUberPaymentMeta(await getSaleOrder(order.bling_order_id),{paymentUrl,total:totals.total,freight:price});}catch(e){console.warn('[Bling payment meta setFreight]',e.message)}}
-  }
-  const updated=await safeUpdateOrder(id,{delivery,totals,payment_url:paymentUrl,raw:{...currentRaw,freightPayment:{order_nsu:id,payment_url:paymentUrl,method:paymentUrl?'infinitepay':'pix_manual',checkout}}});
-  return json(200,{ok:true,order:{id,freight,totals,paymentUrl,blingUpdated},paymentUrl,paymentMethod:paymentUrl?'infinitepay':'pix_manual'});
+  const updated=await safeUpdateOrder(id,{delivery,totals,payment_url:order.payment_url||null,raw:{...currentRaw,freightPayment:{order_nsu:`${id}-FRETE`,payment_url:paymentUrl,checkout}}});
+  return json(200,{ok:true,order:{id,freight,totals,paymentUrl,blingUpdated},paymentUrl});
 }
 
 function isPickupMethodServer(method){return method==='pickup'||method==='pickup_uber'}
@@ -381,7 +383,7 @@ async function createOrder(body){
   const payment=String(body.payment||'');
   if(!['pix_online','card','cash','pending'].includes(payment)) throw new Error('Forma de pagamento inválida.');
   if(payment==='cash' && body.delivery?.method!=='pickup') throw new Error('Dinheiro está disponível somente para retirada presencial.');
-  if(payment==='pending' && !['uber','pickup','pickup_uber'].includes(body.delivery?.method)) throw new Error('Pagamento pendente só pode ser usado em Uber Entregas ou retirada.');
+  if(payment==='pending' && body.delivery?.method!=='uber') throw new Error('Pagamento pendente só pode ser usado em Uber Entregas.');
   if(!Array.isArray(body.items)||!body.items.length) throw new Error('Carrinho vazio.');
   const id=orderId();
   if(isProduction() && process.env.BLING_CREATE_ORDERS!=='true') throw new Error('Para produção, ative BLING_CREATE_ORDERS=true para validar estoque/preços no Bling antes de cobrar.');
@@ -441,7 +443,6 @@ async function createOrder(body){
     const checkout=await createInfinitePayCheckout(baseOrder);
     const paymentUrl=checkout?.url || checkout?.checkout_url || checkout?.payment_url || checkout?.link || checkout?.data?.url || null;
     if(!paymentUrl) throw new Error('A InfinitePay não retornou o link de pagamento.');
-    if(bling?.id){try{await persistUberPaymentMeta(bling,{paymentUrl,total:baseOrder.totals?.total||body.totals?.total||0,freight:baseOrder.totals?.shipping||0});}catch(e){console.warn('[Bling payment meta create]',e.message)}}
     await safeUpdateOrder(id,{payment_url:paymentUrl,raw:{...baseOrder,bling,infinitePay:{order_nsu:id,checkout}}});
     return {ok:true,order:{...baseOrder,bling,infinitePay:checkout},paymentUrl};
   }catch(e){
@@ -538,27 +539,8 @@ async function checkInfinitePayReturn(event){
 }
 
 
-async function getPixConfig(){
-  return json(200,{ok:true,configured:Boolean(String(process.env.RELPPS_PIX_KEY||'').trim()),pixKey:String(process.env.RELPPS_PIX_KEY||'').trim()||null,merchantName:String(process.env.RELPPS_PIX_NAME||'RELPPS COSMETICOS').trim().slice(0,25),merchantCity:String(process.env.RELPPS_PIX_CITY||'BRASILIA').trim().slice(0,15)});
-}
-
-async function getCustomerOrder(id){
-  const local=await resolveOrder(id);
-  if(!local) return null;
-  // Para a página do cliente, tenta ler o pedido atual do Bling. Assim, quando a loja
-  // lançar o frete manual no Bling, o total exibido e o QR Pix podem acompanhar o valor atualizado.
-  if(local.bling_order_id){
-    try{
-      const fresh=await getSaleOrder(local.bling_order_id);
-      const mapped=blingToLocalOrder(fresh);
-      if(mapped) return {...local,...mapped,raw:{...(local.raw||{}),bling:fresh}};
-    }catch(e){console.warn('[Checkout] Não foi possível atualizar a página do cliente pelo Bling:',e.message);}
-  }
-  return local;
-}
-
 async function getPublicOrder(id){
-  const order=await getCustomerOrder(id);
+  const order=await resolveOrder(id);
   if(!order) return json(404,{message:'Pedido não encontrado.'});
   const paid=order.payment_status==='APPROVED' || order.status==='PAID';
   return json(200,{ok:true,order:{id:order.id,status:paid?'PAID':order.status||'AWAITING_PAYMENT',paymentStatus:paid?'APPROVED':(order.payment_status||'AWAITING_PAYMENT'),paymentMethod:order.payment_method||order.raw?.payment||null,paymentUrl:order.payment_url||null,blingOrderId:order.bling_order_id,createdAt:order.created_at||null,paidAt:order.paid_at||null,delivery:order.delivery||{},totals:order.totals||{},items:order.items||order.raw?.items||[],fulfillmentStatus:order.raw?.fulfillmentStatus||null,freight:order.delivery?.shipping||order.raw?.freight||null,freightPayment:order.raw?.freightPayment||null,uber:order.raw?.uber||null}});
@@ -610,7 +592,6 @@ exports.handler=async(event)=>{
     if(action==='sync-uber-freight') return await syncUberFreightFromBling(event);
     if(action==='infinitepay-return') return await checkInfinitePayReturn(event);
     if(event.httpMethod==='GET' && action==='status') return await getPublicOrder(event.queryStringParameters?.order);
-    if(event.httpMethod==='GET' && action==='pix-config') return await getPixConfig();
     if(event.httpMethod!=='POST') return json(405,{message:'Método não permitido'});
     if(action==='create') return json(201,await createOrder(JSON.parse(event.body||'{}')));
     return json(404,{message:'Ação não encontrada.'});
