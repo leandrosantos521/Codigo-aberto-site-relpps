@@ -1,0 +1,17 @@
+RELPPS — VARIÁVEIS PARA ESTA VERSÃO
+
+Mantenha as variáveis do Bling/Supabase que já estão funcionando.
+
+Adicione/ajuste:
+
+PUBLIC_SITE_URL=https://relppscosmetico.netlify.app
+BLING_CREATE_ORDERS=true
+CHECKOUT_TEST_MODE=false
+MELHOR_ENVIO_DISABLED=true
+
+PIX (necessário para o QR real):
+RELPPS_PIX_KEY=SUA_CHAVE_PIX_REAL
+RELPPS_PIX_NAME=RELPPS COSMETICOS
+RELPPS_PIX_CITY=BRASILIA
+
+A chave Pix deve ser a chave pública real da loja (telefone, e-mail, aleatória etc.). Não coloque senha, client secret ou service role key aqui.

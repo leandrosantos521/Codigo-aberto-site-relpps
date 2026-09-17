@@ -1,0 +1,16 @@
+RELPPS — CONFIGURAÇÃO DO PIX
+
+Esta versão não cobra automaticamente. O cliente cria o pedido, recebe uma página com resumo, QR Code Pix e botão para WhatsApp.
+
+Para o QR Code funcionar com uma cobrança Pix real, configure no Netlify: 
+
+RELPPS_PIX_KEY= SUA CHAVE PIX REAL DA LOJA
+RELPPS_PIX_NAME=RELPPS COSMETICOS
+RELPPS_PIX_CITY=BRASILIA
+
+A chave Pix é pública e pode ser usada para gerar o BR Code. Não use senha, token ou chave secreta de API.
+
+IMPORTANTE
+- Para Uber / 99, o pedido é criado primeiro com frete R$ 0,00 / A CALCULAR.
+- A página acompanha o total atual do pedido. Se a loja lançar o frete no Bling, a página pode refletir o total atualizado.
+- Antes de pagar um QR que ainda não tenha o frete incluído, confirme o valor final com a loja pelo WhatsApp.

@@ -38,6 +38,9 @@
   }
   </script>
   <link rel="stylesheet" href="./styles.css">
+<style>
+.locked-delivery-option,.locked-choice{opacity:.62;filter:saturate(.55);cursor:not-allowed!important}.locked-delivery-option strong,.locked-choice strong{font-size:10px;letter-spacing:1px;color:#8b6a35}.manual-delivery-option{border-color:#b8893f!important;box-shadow:0 8px 28px rgba(146,103,38,.08)}.manual-delivery-option strong{font-size:10px;letter-spacing:1px;color:#9a7130}.cart-page-cep input:disabled,.cart-page-cep button:disabled{opacity:.6;cursor:not-allowed}.uber-only-panel{border-color:#d9b56e!important;background:linear-gradient(135deg,#fffaf1,#f8f0e3)!important}.checkout-manual-payment-card{padding:22px;border:1px solid #e6d2ad;border-radius:18px;background:linear-gradient(135deg,#fffaf3,#f7efe4)}.checkout-manual-payment-card b{display:block;font-size:18px;margin-bottom:6px}.checkout-manual-payment-card p{margin:0;color:#74685d;line-height:1.65;font-size:13px}.checkout-manual-badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.checkout-manual-badges span{padding:8px 11px;border-radius:999px;background:#fff;border:1px solid #e5d8c6;font-size:10px;font-weight:800;letter-spacing:.5px}.alt-flow-note{margin-top:14px;padding:13px 15px;border-radius:14px;background:#17130f;color:#fff;font-size:12px;line-height:1.6}.alt-flow-note b{color:#e6c681}
+</style>
 </head>
 <body>
   <div class="announcement" role="region" aria-label="Informações e benefícios da loja">
@@ -474,12 +477,13 @@
           <div id="cartPageItems" class="cart-page-items"></div>
         </section>
         <aside class="cart-page-summary-card">
-          <h2>Frete</h2>
-          <p class="cart-page-helper">Digite seu CEP para calcular o <b>Melhor Envio</b>. Uber Entregas permanece <b>A calcular</b>.</p>
-          <div class="cart-page-cep"><input id="cartPageCep" inputmode="numeric" maxlength="9" placeholder="Digite seu CEP"><button id="cartPageQuoteButton" type="button">Calcular</button></div>
-          <label class="cart-page-pickup-choice" id="cartPagePickupChoice"><input type="radio" name="cartPageReceiveMode" value="pickup"><span class="pickup-choice-icon">🏪</span><span><b>Retirada</b><small>Presencial reservada ou Retirada via Uber / 99 por conta do cliente.</small></span></label>
-          <label class="cart-page-delivery-choice"><input type="radio" name="cartPageReceiveMode" value="delivery" checked><span class="pickup-choice-icon">🚚</span><span><b>Entrega</b><small>Melhor Envio calcula no checkout; Uber fica A calcular.</small></span></label>
-          <div id="cartPageShippingOptions" class="cart-page-shipping"><div class="cart-page-shipping-empty">Informe seu CEP para registrar a localização do pedido.</div></div>
+          <h2>Como receber</h2>
+          <p class="cart-page-helper"><b>Entrega via Uber</b>: o frete será calculado pela Relpps depois que o pedido for enviado. O Melhor Envio está temporariamente bloqueado.</p>
+          <div class="cart-page-cep"><input id="cartPageCep" inputmode="numeric" maxlength="9" placeholder="CEP para localização" disabled><button id="cartPageQuoteButton" type="button" disabled>Bloqueado</button></div>
+          <label class="cart-page-delivery-choice manual-selected"><input type="radio" name="cartPageReceiveMode" value="delivery" checked><span class="pickup-choice-icon">🛵</span><span><b>Entrega via Uber / 99</b><small>A calcular — a loja fará a cotação e enviará o valor final.</small></span><strong>A calcular</strong></label>
+          <label class="cart-page-delivery-choice locked-choice"><input type="radio" disabled><span class="pickup-choice-icon">🔒</span><span><b>Melhor Envio</b><small>Temporariamente indisponível. Voltará em uma próxima versão.</small></span><strong>BLOQUEADO</strong></label>
+          <label class="cart-page-pickup-choice" id="cartPagePickupChoice"><input type="radio" name="cartPageReceiveMode" value="pickup"><span class="pickup-choice-icon">🏪</span><span><b>Retirada</b><small>Na loja ou retirada via Uber / 99 por conta do cliente.</small></span></label>
+          <div id="cartPageShippingOptions" class="cart-page-shipping"><div class="cart-page-shipping-empty"><b>🛵 Uber / 99 — A calcular</b><br>O pedido será enviado para a loja e a Relpps informará o valor final da entrega.</div></div>
           <div class="cart-page-total-box">
             <div><span>Subtotal</span><b id="cartPageSubtotal">R$ 0,00</b></div>
             <div><span>Frete</span><b id="cartPageShipping">—</b></div>
@@ -522,8 +526,8 @@
                 <div class="section-heading-row"><div><h3>2. Como você quer receber?</h3><p class="micro-note">Escolha a forma de recebimento. Para entrega, informe o CEP logo abaixo.</p></div><span class="checkout-step-badge">02</span></div>
                 <div class="fulfillment-flow">
                   <div class="fulfillment-group"><div class="fulfillment-title"><span>🚚</span><div><b>Entrega</b><small>Receba no endereço informado</small></div></div><div class="delivery-options nested">
-                    <label class="delivery-option"><input type="radio" name="delivery" value="melhor_envio" checked><span class="delivery-icon">📦</span><span><b>Melhor Envio</b><small>Cotação em tempo real no checkout</small></span></label>
-                    <label class="delivery-option"><input type="radio" name="delivery" value="uber"><span class="delivery-icon">🛵</span><span><b>Uber Entregas</b><small>A calcular — o valor será informado depois no pedido</small></span></label>
+                    <label class="delivery-option locked-delivery-option"><input type="radio" name="delivery" value="melhor_envio" disabled><span class="delivery-icon">🔒</span><span><b>Melhor Envio</b><small>Temporariamente bloqueado</small></span><strong>BLOQUEADO</strong></label>
+                    <label class="delivery-option manual-delivery-option"><input type="radio" name="delivery" value="uber" checked><span class="delivery-icon">🛵</span><span><b>Entrega via Uber / 99</b><small>A calcular — a Relpps fará a cotação depois do pedido</small></span><strong>A CALCULAR</strong></label>
                   </div></div>
                   <div class="fulfillment-group"><div class="fulfillment-title"><span>🏪</span><div><b>Retirada</b><small>Escolha a forma de retirada</small></div></div><div class="delivery-options nested">
                     <label class="delivery-option"><input type="radio" name="delivery" value="pickup"><span class="delivery-icon">🤝</span><span><b>Retirada presencial</b><small>Retire após a confirmação</small></span></label>
@@ -535,24 +539,24 @@
               </div>
 
               <div class="form-section checkout-step-card checkout-address-step" id="addressFields">
-                <div class="section-heading-row"><div><h3>CEP e endereço</h3><p class="micro-note">Para entrega, informe o CEP. O Melhor Envio é cotado agora; Uber Entregas fica “A calcular”.</p></div><span class="checkout-step-badge">CEP</span></div>
+                <div class="section-heading-row"><div><h3>Endereço de entrega</h3><p class="micro-note">Informe o endereço e o CEP para a Relpps localizar o destino e fazer a cotação do Uber / 99.</p></div><span class="checkout-step-badge">CEP</span></div>
                 <div class="form-grid">
-                  <label>CEP<div class="input-with-action"><input name="cep" id="cep" inputmode="numeric" placeholder="00000-000" maxlength="9"><button type="button" id="quoteShippingButton">CALCULAR FRETE</button></div></label>
+                  <label>CEP<div class="input-with-action"><input name="cep" id="cep" inputmode="numeric" placeholder="00000-000" maxlength="9"><button type="button" id="quoteShippingButton">BUSCAR ENDEREÇO</button></div></label>
                   <label>Endereço<input name="address" id="address"></label>
                   <label>Número<input name="number" id="number"></label>
                   <label>Complemento<input name="complement" id="complement"></label>
                   <label>Bairro<input name="district" id="district"></label>
                   <label>Cidade / UF<input name="city" id="city"></label>
                 </div>
-                <div id="shippingQuotePanel" class="shipping-quote-panel"><div class="shipping-empty"><b>Informe o CEP</b><span>O Melhor Envio calcula o frete em tempo real. Uber Entregas fica “A calcular”.</span></div></div>
-                <p class="micro-note" id="shippingStatusNote">O Melhor Envio será cotado agora e incluído no pagamento. Para Uber Entregas, o pedido é criado primeiro e o frete será lançado depois no pedido.</p>
+                <div id="shippingQuotePanel" class="shipping-quote-panel"><div class="shipping-empty uber-only-panel"><b>🛵 Uber / 99 — frete a calcular</b><span>O pedido será enviado para a loja com seu endereço. A Relpps fará a cotação e enviará o valor final.</span></div></div>
+                <p class="micro-note" id="shippingStatusNote">O Melhor Envio está temporariamente bloqueado. Para Uber / 99, primeiro enviamos o pedido; depois a loja informa o frete e o valor final.</p>
               </div>
-              <div class="checkout-stage-actions"><button class="checkout-stage-back" id="checkoutBackToData" type="button">← Voltar para dados</button><button class="btn btn-gold checkout-stage-next" id="checkoutToPayment" type="button">CONTINUAR PARA PAGAMENTO →</button></div>
+              <div class="checkout-stage-actions"><button class="checkout-stage-back" id="checkoutBackToData" type="button">← Voltar para dados</button><button class="btn btn-gold checkout-stage-next" id="checkoutToPayment" type="button">CONTINUAR PARA CONFIRMAÇÃO →</button></div>
             </section>
 
             <section class="checkout-stage" data-checkout-stage="3" id="checkoutStagePayment">
               <div class="form-section checkout-step-card checkout-payment-card">
-                <div class="section-heading-row"><div><h3>3. Pagamento</h3><p class="micro-note" id="paymentNote">Escolha Pix ou Cartão. O pagamento acontece no checkout seguro da InfinitePay; esta página não coleta dados do cartão.</p></div><span class="checkout-step-badge">03</span></div>
+                <div class="section-heading-row"><div><h3>3. Confirmar pedido</h3><p class="micro-note" id="paymentNote">O pedido será criado com o valor dos produtos e enviado para a loja. A cotação do Uber / 99 será feita depois.</p></div><span class="checkout-step-badge">03</span></div>
                 <div class="payment-options" id="paymentOptions"></div>
                 <div class="payment-visual-details hidden" id="paymentVisualDetails"></div>
                 <div class="checkout-coupon-box" id="checkoutCouponBox">
@@ -560,9 +564,9 @@
                   <div class="checkout-coupon-form"><input id="checkoutCouponCode" type="text" placeholder="EX.: RELPPS-XXXXX-1234" autocomplete="off"><button id="applyCheckoutCoupon" type="button">APLICAR</button></div>
                   <div class="checkout-coupon-status" id="checkoutCouponStatus">Nenhum cupom aplicado.</div>
                 </div>
-                <div class="payment-secure-strip">🔒 Ambiente protegido • Os dados de pagamento serão processados pelo provedor seguro configurado na próxima etapa.</div>
+                <div class="payment-secure-strip">🔒 Pedido sem cobrança automática • Você verá uma página com o pedido, valor atual, Pix e botão para falar com a Relpps no WhatsApp.</div>
               </div>
-              <div class="checkout-stage-actions payment-stage-actions"><button class="checkout-stage-back" id="checkoutBackToReceive" type="button">← Voltar para recebimento</button><span>Revise sua forma de pagamento antes de finalizar.</span></div>
+              <div class="checkout-stage-actions payment-stage-actions"><button class="checkout-stage-back" id="checkoutBackToReceive" type="button">← Voltar para recebimento</button><span>Confira os dados e envie o pedido para a Relpps.</span></div>
             </section>
           </div>
 
@@ -573,7 +577,7 @@
             <div class="summary-line"><span>Frete</span><b id="checkoutShipping">Calcule o CEP</b></div>
             <div class="summary-line checkout-discount-line hidden" id="checkoutDiscountLine"><span>Desconto</span><b id="checkoutDiscount">− R$ 0,00</b></div>
             <div class="summary-total"><span>Total</span><strong id="checkoutTotal"></strong></div>
-            <button class="btn btn-gold full checkout-final-button hidden" type="button" id="checkoutSubmitButton">IR PARA O CHECKOUT SEGURO</button>
+            <button class="btn btn-gold full checkout-final-button hidden" type="button" id="checkoutSubmitButton">ENVIAR PEDIDO PARA A RELPPS</button>
             <div class="checkout-stage-summary-hint" id="checkoutStageSummaryHint">Complete seus dados para avançar para a próxima etapa.</div>
             <button class="checkout-whatsapp-link" id="checkoutWhatsAppButton" type="button">💬 Preciso de ajuda pelo WhatsApp</button>
             <p class="micro-note">🔒 Compra segura. Seus dados são usados apenas para processar e acompanhar o pedido.</p>
